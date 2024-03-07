@@ -18,27 +18,30 @@ type Person struct {
     Name string
 }
 type Application struct{
+ qry *db.Queries
+}
 
+func middlewareOne(next http.Handler) http.Handler {
+	fmt.Println("middlewatre executed")
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		next.ServeHTTP(w, r)
+	})
 }
 
 func main(){
-
 	mux:=http.NewServeMux()
 	ctx,_ := context.WithTimeout(context.Background(),time.Millisecond*5000)
+	
 	conn, error:= pgx.Connect(ctx,"postgresql://admin:admin@165.232.179.121:5432/taskdb?sslmode=disable")
-    queries := db.New(conn)
-    if error!=nil{
-		fmt.Println(error)
-	}else{
-		fmt.Println("connected",conn)
+
+    app:=Application{qry:db.New(conn)}
+
+    if error!=nil{fmt.Println(error)}else{
+		fmt.Println("connected to database")
 	}
 
-
-
-	mux.HandleFunc("GET /api",func(w http.ResponseWriter, r *http.Request) {
-		
-		w.Write([]byte("rejath chandran"))
-    })
+	final := http.HandlerFunc(app.Home)
+	mux.Handle("GET /api",middlewareOne(final))
 
 	
 
